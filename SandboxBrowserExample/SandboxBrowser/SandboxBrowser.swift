@@ -49,6 +49,16 @@ public struct FileItem {
         }
     }
     
+    public var size: UInt64 {
+        do {
+            let attr = try FileManager.default.attributesOfItem(atPath: path)
+            return attr[FileAttributeKey.size] as? UInt64 ?? 0
+        } catch {
+            print(error)
+            return 0
+        }
+    }
+
     var image: UIImage {
         let bundle = Bundle(for: FileListViewController.self)
         let path = bundle.path(forResource: "Resources", ofType: "bundle")
@@ -87,6 +97,7 @@ public class FileListViewController: UIViewController {
     
     private lazy var tableView: UITableView = {
         let view = UITableView(frame: self.view.bounds)
+        view.contentInset = .init(top: 0, left: 0, bottom: 52, right: 0)
         view.backgroundColor = .white
         view.delegate = self
         view.dataSource = self
@@ -144,6 +155,7 @@ public class FileListViewController: UIViewController {
         
         var filelist: [FileItem] = []
         paths
+            .sorted()
             .filter { !$0.hasPrefix(".") }
             .forEach { subpath in
             var isDir: ObjCBool = ObjCBool(false)
@@ -219,9 +231,15 @@ extension FileListViewController: UITableViewDelegate, UITableViewDataSource {
         let item = items[indexPath.row]
         cell?.textLabel?.text = item.name
         cell?.imageView?.image = item.image
-        cell?.detailTextLabel?.text = DateFormatter.localizedString(from: item.modificationDate,
+        let dateString = DateFormatter.localizedString(from: item.modificationDate,
                                                                     dateStyle: .medium,
                                                                     timeStyle: .medium)
+        let bcf = ByteCountFormatter()
+        bcf.countStyle = .file
+        let sizeString = bcf.string(fromByteCount: Int64(item.size))
+
+        cell?.detailTextLabel?.text = "\(dateString) \(sizeString)"
+
         if #available(iOS 13.0, *) {
             cell?.detailTextLabel?.textColor = .secondaryLabel
         } else {
